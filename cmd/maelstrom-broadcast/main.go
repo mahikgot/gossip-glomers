@@ -12,26 +12,23 @@ func main() {
 	n := maelstrom.NewNode()
 	sl := make([]float64, 0, 1024)
 
-	n.Handle("broadcast", handler.Make(n, func(msgBody map[string]any) (map[string]any, error) {
-		message, ok := msgBody["message"].(float64)
+	n.Handle("broadcast", handler.Make(n, func(requestBody, responseBody *map[string]any) error {
+		message, ok := (*requestBody)["message"].(float64)
 		if !ok {
-			return nil, errors.New("broadcastHandle: body message type not int")
+			return errors.New("broadcastHandle: body message type not int")
 		}
 		sl = append(sl, message)
 
-		responseBody := make(map[string]any)
-		return responseBody, nil
+		return nil
 	}))
 
-	n.Handle("read", handler.Make(n, func(msgBody map[string]any) (map[string]any, error) {
-		responseBody := make(map[string]any)
-		responseBody["messages"] = sl
-		return responseBody, nil
+	n.Handle("read", handler.Make(n, func(requestBody, responseBody *map[string]any) error {
+		(*responseBody)["messages"] = sl
+		return nil
 	}))
 
-	n.Handle("topology", handler.Make(n, func(msgBody map[string]any) (map[string]any, error) {
-		responseBody := make(map[string]any)
-		return responseBody, nil
+	n.Handle("topology", handler.Make(n, func(requestBody, responseBody *map[string]any) error {
+		return nil
 	}))
 
 	if err := n.Run(); err != nil {
