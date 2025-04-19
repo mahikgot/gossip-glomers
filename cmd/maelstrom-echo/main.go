@@ -10,8 +10,8 @@ import (
 func main() {
 	n := maelstrom.NewNode()
 
-	n.Handle("echo", handler.Make(n, func(requestBody, responseBody *map[string]any) error {
-		(*responseBody)["echo"] = (*requestBody)["echo"]
+	n.Handle("echo", handler.Make(n, func(requestBody, responseBody map[string]any) error {
+		responseBody["echo"] = requestBody["echo"]
 		return nil
 	}))
 

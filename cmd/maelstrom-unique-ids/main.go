@@ -11,8 +11,8 @@ import (
 func main() {
 	n := maelstrom.NewNode()
 
-	n.Handle("generate", handler.Make(n, func(requestBody, responseBody *map[string]any) error {
-		(*responseBody)["id"] = rand.Int63()
+	n.Handle("generate", handler.Make(n, func(requestBody, responseBody map[string]any) error {
+		responseBody["id"] = rand.Int63()
 		return nil
 	}))
 
