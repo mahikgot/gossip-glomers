@@ -11,49 +11,73 @@ import (
 
 type Server struct {
 	node     *maelstrom.Node
-	messages []float64
+	messages map[float64]string
 	mu       sync.Mutex
+	topology []string
 }
 
 func main() {
 	server := &Server{
 		node:     maelstrom.NewNode(),
-		messages: make([]float64, 0, 1024),
+		messages: make(map[float64]string),
 	}
 
 	server.node.Handle("broadcast", server.Broadcast())
 	server.node.Handle("read", server.Read())
 	server.node.Handle("topology", server.Topology())
+	server.node.Handle("broadcast_ok", server.Noop())
 
 	server.Run()
 }
 
 func (s *Server) Broadcast() maelstrom.HandlerFunc {
-	return handler.Make(s.node, func(requestBody, responseBody map[string]any) error {
+	return handler.Make(s.node, func(msg maelstrom.Message, requestBody, responseBody map[string]any) error {
 		message, ok := requestBody["message"].(float64)
 		if !ok {
 			return errors.New("broadcastHandle: body message type not int")
 		}
 
-		defer s.mu.Unlock()
 		s.mu.Lock()
-		s.messages = append(s.messages, message)
+		if _, ok := s.messages[message]; ok {
+			s.mu.Unlock()
+			return nil
+		}
+		s.messages[message] = ""
+		s.mu.Unlock()
+
+		broadcastBody := make(map[string]any)
+		broadcastBody["type"] = "broadcast"
+		broadcastBody["message"] = message
+
+		for _, id := range s.topology {
+			if id == s.node.ID() || id == msg.Src {
+				continue
+			}
+			s.node.Send(id, broadcastBody)
+		}
 
 		return nil
 	})
 }
 
 func (s *Server) Read() maelstrom.HandlerFunc {
-	return handler.Make(s.node, func(requestBody, responseBody map[string]any) error {
-		responseBody["messages"] = s.messages
+	return handler.Make(s.node, func(msg maelstrom.Message, requestBody, responseBody map[string]any) error {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		responseBody["messages"] = handler.MapKeysToSlice(s.messages)
 		return nil
 	})
 }
 
 func (s *Server) Topology() maelstrom.HandlerFunc {
-	return handler.Make(s.node, func(requestBody, responseBody map[string]any) error {
+	return handler.Make(s.node, func(msg maelstrom.Message, requestBody, responseBody map[string]any) error {
+		s.topology = s.node.NodeIDs()
 		return nil
 	})
+}
+
+func (s *Server) Noop() maelstrom.HandlerFunc {
+	return handler.Nothing()
 }
 
 func (s *Server) Run() {
