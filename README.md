@@ -5,13 +5,13 @@ A series of hands-on **distributed systems challenges** that run on a **simulate
 
 ---
 
-### 🔥 Single Node Broadcast
-
-
----
-
 ### 🌐 Multi-Node Broadcast
 
+#### First solution (naive):
+
+When a node receives a broadcast call, it iterates through the topology and sends a Broadcast call (blocking) to each node that is not itself nor the sender.
+
+To prevent infinite broadcast loops, the node first checks if it has already received the message by checking its message store.
 
 ---
 
